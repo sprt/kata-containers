@@ -325,6 +325,9 @@ type HypervisorConfig struct {
 	// ImagePath and InitrdPath cannot be set at the same time.
 	InitrdPath string
 
+	// IgvmPath is the guest IGVM host path.
+	IgvmPath string
+
 	// RootfsType is filesystem type of rootfs.
 	RootfsType string
 
@@ -757,6 +760,8 @@ func (conf *HypervisorConfig) assetPath(t types.AssetType) (string, error) {
 		return conf.KernelPath, nil
 	case types.ImageAsset:
 		return conf.ImagePath, nil
+	case types.IgvmAsset:
+		return conf.IgvmPath, nil
 	case types.InitrdAsset:
 		return conf.InitrdPath, nil
 	case types.HypervisorAsset:
@@ -797,6 +802,16 @@ func (conf *HypervisorConfig) ImageAssetPath() (string, error) {
 // CustomImageAsset returns true if the image asset is a custom one, false otherwise.
 func (conf *HypervisorConfig) CustomImageAsset() bool {
 	return conf.isCustomAsset(types.ImageAsset)
+}
+
+// IgvmAssetPath returns the guest image path
+func (conf *HypervisorConfig) IgvmAssetPath() (string, error) {
+	return conf.assetPath(types.IgvmAsset)
+}
+
+// CustomIgvmAsset returns true if the image asset is a custom one, false otherwise.
+func (conf *HypervisorConfig) CustomIgvmAsset() bool {
+	return conf.isCustomAsset(types.IgvmAsset)
 }
 
 // InitrdAssetPath returns the guest initrd path
