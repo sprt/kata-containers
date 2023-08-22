@@ -74,7 +74,7 @@ const (
 	// Values based on:
 	clhTimeout                     = 10
 	clhAPITimeout                  = 1
-	clhAPITimeoutConfidentialGuest = 40
+	clhAPITimeoutConfidentialGuest = 60
 	// Timeout for hot-plug - hotplug devices can take more time, than usual API calls
 	// Use longer time timeout for it.
 	clhHotPlugAPITimeout                   = 5
@@ -84,6 +84,7 @@ const (
 	clhAPISocket                           = "clh-api.sock"
 	virtioFsSocket                         = "virtiofsd.sock"
 	defaultClhPath                         = "/usr/local/bin/cloud-hypervisor"
+	snpHostDataDummy                       = "0123456789012345678901234567890123456789012345678901234567890123"
 )
 
 // Interface that hides the implementation of openAPI client
@@ -414,9 +415,19 @@ func (clh *cloudHypervisor) nydusdAPISocketPath(id string) (string, error) {
 }
 
 func (clh *cloudHypervisor) enableProtection() error {
-	protection, err := availableGuestProtection()
-	if err != nil {
-		return err
+
+	protection := noneProtection
+
+	// SNP protection explicitly requested by config
+	if clh.config.SevSnpGuest {
+		protection = snpProtection
+	} else {
+		// protection method not explicitly requested, using available method
+		availableProtection, err := availableGuestProtection()
+		if err != nil {
+			return err
+		}
+		protection = availableProtection
 	}
 
 	switch protection {
@@ -441,8 +452,16 @@ func (clh *cloudHypervisor) enableProtection() error {
 
 	case sevProtection:
 		return errors.New("SEV protection is not supported by Cloud Hypervisor")
+
 	case snpProtection:
-		return errors.New("SEV-SNP protection is not supported by Cloud Hypervisor")
+		if clh.vmconfig.Platform == nil {
+			clh.vmconfig.Platform = chclient.NewPlatformConfig()
+		}
+		clh.vmconfig.Platform.SetSnp(true)
+
+		clh.vmconfig.Payload.SetHostData(snpHostDataDummy)
+
+		return nil
 
 	default:
 		return errors.New("This system doesn't support Confidential Computing (Guest Protection)")
@@ -493,15 +512,22 @@ func (clh *cloudHypervisor) CreateVM(ctx context.Context, id string, network Net
 	if err != nil {
 		return err
 	}
-	clh.vmconfig.Payload.SetIgvm(igvmPath)
 
 	// Make sure the kernel path is valid if no igvm set
 	if igvmPath == "" {
+		if clh.config.ConfidentialGuest {
+			return errors.New("igvm must be set with confidential_guest")
+		}
 		kernelPath, err := clh.config.KernelAssetPath()
 		if err != nil {
 			return err
 		}
 		clh.vmconfig.Payload.SetKernel(kernelPath)
+	} else {
+		if !clh.config.ConfidentialGuest {
+			return errors.New("igvm can only be set with confidential_guest")
+		}
+		clh.vmconfig.Payload.SetIgvm(igvmPath)
 	}
 
 	clh.vmconfig.Platform = chclient.NewPlatformConfig()
@@ -514,9 +540,6 @@ func (clh *cloudHypervisor) CreateVM(ctx context.Context, id string, network Net
 	if clh.config.ConfidentialGuest {
 		if err := clh.enableProtection(); err != nil {
 			return err
-		}
-		if igvmPath == "" {
-			return errors.New("igvm must be set with confidential_guest")
 		}
 	}
 
@@ -602,8 +625,8 @@ func (clh *cloudHypervisor) CreateVM(ctx context.Context, id string, network Net
 				clh.vmconfig.Pmem = &[]chclient.PmemConfig{*pmem}
 			}
 		}
-	} 
-	
+	}
+
 	initrdPath, err := clh.config.InitrdAssetPath()
 	if err != nil {
 		return err
