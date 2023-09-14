@@ -6,7 +6,7 @@
 use anyhow::{bail, Result};
 use sha2::{Sha256, Digest};
 use serde::{Deserialize, Serialize};
-use slog::Drain;
+use crate::slog::Drain;
 use tokio::io::AsyncWriteExt;
 use tokio::time::{sleep, Duration};
 
@@ -273,8 +273,19 @@ pub fn check_policy_hash(policy: &str) -> Result<()> {
     let mut hasher = Sha256::new();
     hasher.update(policy.as_bytes());
     let digest = hasher.finalize();
-    debug!(sl!(), "New policy hash: {}", hex::encode(digest));
+    debug!(sl!(), "policy: calculated hash ({:?})", digest.as_slice());
 
-    // TODO: check that the corresponding TEE field matches this hash.
+    let mut firmware = sev::firmware::guest::Firmware::open()?;
+    let report_data: [u8; 64] = [0; 64];
+    let report = firmware.get_report(None, Some(report_data), Some(0))?;
+
+    if report.host_data != digest.as_slice() {
+        bail!(
+            "Unexpected policy hash ({:?}), expected ({:?})",
+            digest.as_slice(),
+            report.host_data
+        );
+    }
+
     Ok(())
 }
