@@ -59,6 +59,7 @@ jobs:
 
           gh workflow run ci.yaml \
             -r ${{ steps.pr-info.outputs.head_ref }} \
+            -f caller-workflow=${{ github.workflow }} \
             -f commit-hash=${{ steps.pr-info.outputs.head_sha }} \
             -f pr-number=${{ github.event.issue.number }} \
             -f tag=${{ github.event.issue.number }}-${{ steps.pr-info.outputs.head_sha }} \
