@@ -1,0 +1,58 @@
+name: Kata Containers CI
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for /test-gha
+        id: test-gha
+        run: |
+          comment_body=$(
+          cat <<'END_COMMENT'
+          ${{ github.event.comment.body }}
+          END_COMMENT
+          )
+          if echo "$comment_body" | sed 's/\r$//' | grep -xq '^/test-gha$'; then
+            echo "is_present=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get target branch
+        id: target-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          target_branch="$( \
+            gh pr view '${{ github.event.issue.number }}' \
+            --repo '${{ github.repository }}' \
+            --json baseRefName \
+            --jq '.baseRefName' \
+          )"
+          echo "name=$target_branch" >> $GITHUB_OUTPUT
+      
+      - name: Print workflow debug info
+        run: |
+          echo 'Is PR: ${{ !!github.event.issue.pull_request }}'
+          echo 'Author is owner/member: ${{
+            contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association)
+          }}'
+          echo 'Target branch is main/stable-*: ${{
+            steps.target-branch.outputs.name == 'main' ||
+            startsWith(steps.target-branch.outputs.name, 'stable-')
+          }}'
+          echo 'Comment has /test-gha: ${{ steps.test-gha.outputs.is_present == 'true' }}'
+
+      # NOTE: Ensure we're not retesting the same commit.
+      # NOTE: Ensure we only rerun failed jobs.
+
+      - name: Dummy CI
+        if: |
+          github.event.issue.pull_request &&
+          contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association) &&
+          (steps.target-branch.outputs.name == 'main' ||
+            startsWith(steps.target-branch.outputs.name, 'stable-')) &&
+          steps.test-gha.outputs.is_present == 'true'
+        run: |
+          echo 'CI would run'
