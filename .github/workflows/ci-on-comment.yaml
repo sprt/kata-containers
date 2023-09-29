@@ -4,8 +4,12 @@ on:
     types: [created]
 
 jobs:
-  debug:
+  metadata:
     runs-on: ubuntu-latest
+    outputs:
+      has_test_gha: ${{ steps.test-gha.outputs.is_present }}
+      base_commit_hash: ${{ steps.base-commit.outputs.hash }}
+      target_branch: ${{ steps.target-branch.outputs.name }}
     steps:
       - name: Check for /test-gha
         id: test-gha
@@ -18,6 +22,19 @@ jobs:
           if echo "$comment_body" | sed 's/\r$//' | grep -xq '^/test-gha$'; then
             echo "is_present=true" >> $GITHUB_OUTPUT
           fi
+      
+      - name: Get base commit
+        id: base-commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          base_commit="$( \
+            gh pr view '${{ github.event.issue.number }}' \
+            --repo '${{ github.repository }}' \
+            --json headRefOid \
+            --jq '.headRefOid' \
+          )"
+          echo "hash=$base_commit" >> $GITHUB_OUTPUT
 
       - name: Get target branch
         id: target-branch
@@ -44,15 +61,35 @@ jobs:
           }}'
           echo 'Comment has /test-gha: ${{ steps.test-gha.outputs.is_present == 'true' }}'
 
-      # NOTE: Ensure we're not retesting the same commit.
-      # NOTE: Ensure we only rerun failed jobs.
+  # NOTE: Ensure we only rerun failed jobs.
+  # NOTE: Ensure we're not retesting the same commit.
+  
+  # Get workflow ID from run ID:
+  # gh api repos/sprt/kata-containers/actions/runs/6344599635 | jq -r '.workflow_id'
+  # Get workflow ID from yaml:
+  # gh api repos/sprt/kata-containers/actions/workflows | jq -r --arg file ".github/workflows/ci-on-comment.yaml" '.workflows[] | select(.path == $file) | .id'
+  # All runs for workflow ID:
+  # gh api repos/sprt/kata-containers/actions/workflows/70949260/runs
 
-      - name: Dummy CI
-        if: |
-          github.event.issue.pull_request &&
-          contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association) &&
-          (steps.target-branch.outputs.name == 'main' ||
-            startsWith(steps.target-branch.outputs.name, 'stable-')) &&
-          steps.test-gha.outputs.is_present == 'true'
-        run: |
-          echo 'CI would run'
+  # Get commit hash corresponding to comment
+  # Check if ci.yaml run exists with above commit hash input
+  #   If yes:
+  #     If still running: do nothing
+  #     Else: rerun only failed
+  #   Else: dispatch event
+
+  kata-containers-ci-on-comment:
+    needs: metadata
+    if: |
+      github.event.issue.pull_request &&
+      contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association) &&
+      (needs.metadata.outputs.target_branch == 'main' ||
+        startsWith(needs.metadata.outputs.target_branch, 'stable-')) &&
+      needs.metadata.outputs.has_test_gha == 'true'
+    uses: ./.github/workflows/ci.yaml
+    with:
+      caller-workflow: ${{ github.workflow }}
+      commit-hash: ${{ needs.metadata.outputs.base_commit_hash }}
+      pr-number: ${{ github.event.issue.number }}
+      tag: ${{ github.event.issue.number }}-${{ needs.metadata.outputs.base_commit_hash }}
+    secrets: inherit
