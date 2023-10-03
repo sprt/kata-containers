@@ -1,6 +1,6 @@
 name: Kata Containers CI
 on:
-  issue_comment:
+  pull_request_review_comment:
     types: [created]
 
 jobs:
@@ -8,8 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has_test_gha: ${{ steps.test-gha.outputs.is_present }}
-      base_commit_hash: ${{ steps.base-commit.outputs.hash }}
-      target_branch: ${{ steps.target-branch.outputs.name }}
     steps:
       - name: Check for /test-gha
         id: test-gha
@@ -23,44 +21,6 @@ jobs:
             echo "is_present=true" >> $GITHUB_OUTPUT
           fi
       
-      - name: Get base commit
-        id: base-commit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          base_commit="$( \
-            gh pr view '${{ github.event.issue.number }}' \
-            --repo '${{ github.repository }}' \
-            --json headRefOid \
-            --jq '.headRefOid' \
-          )"
-          echo "hash=$base_commit" >> $GITHUB_OUTPUT
-
-      - name: Get target branch
-        id: target-branch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          target_branch="$( \
-            gh pr view '${{ github.event.issue.number }}' \
-            --repo '${{ github.repository }}' \
-            --json baseRefName \
-            --jq '.baseRefName' \
-          )"
-          echo "name=$target_branch" >> $GITHUB_OUTPUT
-      
-      - name: Print workflow debug info
-        run: |
-          echo 'Is PR: ${{ !!github.event.issue.pull_request }}'
-          echo 'Author is owner/member: ${{
-            contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association)
-          }}'
-          echo 'Target branch is main/stable-*: ${{
-            steps.target-branch.outputs.name == 'main' ||
-            startsWith(steps.target-branch.outputs.name, 'stable-')
-          }}'
-          echo 'Comment has /test-gha: ${{ steps.test-gha.outputs.is_present == 'true' }}'
-
   # NOTE: Ensure we only rerun failed jobs.
   # NOTE: Ensure we're not retesting the same commit.
   
@@ -81,15 +41,14 @@ jobs:
   kata-containers-ci-on-comment:
     needs: metadata
     if: |
-      github.event.issue.pull_request &&
       contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association) &&
-      (needs.metadata.outputs.target_branch == 'main' ||
-        startsWith(needs.metadata.outputs.target_branch, 'stable-')) &&
+      (github.event.pull_request.base.ref == 'main' ||
+        startsWith(github.event.pull_request.base.ref, 'stable-')) &&
       needs.metadata.outputs.has_test_gha == 'true'
     uses: ./.github/workflows/ci.yaml
     with:
       caller-workflow: ${{ github.workflow }}
-      commit-hash: ${{ needs.metadata.outputs.base_commit_hash }}
-      pr-number: ${{ github.event.issue.number }}
-      tag: ${{ github.event.issue.number }}-${{ needs.metadata.outputs.base_commit_hash }}
+      commit-hash: ${{ github.sha }}
+      pr-number: ${{ github.event.pull_request.number }}
+      tag: ${{ github.event.pull_request.number }}-${{ github.sha }}
     secrets: inherit
