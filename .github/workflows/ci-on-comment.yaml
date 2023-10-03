@@ -1,7 +1,7 @@
 name: Kata Containers CI
 on:
-  pull_request_review_comment:
-    types: [created]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   metadata:
@@ -14,7 +14,7 @@ jobs:
         run: |
           comment_body=$(
           cat <<'END_COMMENT'
-          ${{ github.event.comment.body }}
+          ${{ github.event.review.body }}
           END_COMMENT
           )
           if echo "$comment_body" | sed 's/\r$//' | grep -xq '^/test-gha$'; then
@@ -41,7 +41,7 @@ jobs:
   kata-containers-ci-on-comment:
     needs: metadata
     if: |
-      contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association) &&
+      contains(fromJSON('["MEMBER", "OWNER"]'), github.event.review.author_association) &&
       (github.event.pull_request.base.ref == 'main' ||
         startsWith(github.event.pull_request.base.ref, 'stable-')) &&
       needs.metadata.outputs.has_test_gha == 'true'
