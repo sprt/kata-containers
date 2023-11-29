@@ -46,4 +46,6 @@
 - [How to run Kata Containers with AMD SEV-SNP](how-to-run-kata-containers-with-SNP-VMs.md)
 - [How to use EROFS to build rootfs in Kata Containers](how-to-use-erofs-build-rootfs.md)
 - [How to run Kata Containers with kinds of Block Volumes](how-to-run-kata-containers-with-kinds-of-Block-Volumes.md)
+
+## Confidential Containers
 - [How to use the Kata Agent Policy](how-to-use-the-kata-agent-policy.md)
