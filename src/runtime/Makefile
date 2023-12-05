@@ -271,6 +271,12 @@ DEFBINDMOUNTS := []
 # Image Service Offload
 DEFSERVICEOFFLOAD ?= false
 
+# SNP
+DEFSNPGUEST ?= true
+# Based on SEV Secure Nested Paging Firmware ABI Specification section 4.3
+# unspecified or == 0 --> 0x30000 i.e. Bit#17 is '1' and Bit#16 is '1' (SMT is allowed)
+DEFSNPGUESTPOLICY ?= 0x30000
+
 SED = sed
 
 CLI_DIR = cmd
@@ -700,6 +706,8 @@ USER_VARS += DEFBINDMOUNTS
 USER_VARS += DEFSERVICEOFFLOAD
 USER_VARS += DEFVFIOMODE
 USER_VARS += BUILDFLAGS
+USER_VARS += DEFSNPGUESTPOLICY
+USER_VARS += DEFSNPGUEST
 
 
 V              = @
