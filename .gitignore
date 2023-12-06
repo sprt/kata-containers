@@ -17,6 +17,7 @@ build
 src/tools/log-parser/kata-log-parser
 
 # Microsoft-specific
+src/agent/samples/policy/test-input/
 src/tarfs/**/*.cmd
 src/tarfs/**/*.ko
 src/tarfs/**/*.mod
