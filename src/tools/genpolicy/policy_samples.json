@@ -5,6 +5,7 @@
         "deployment/deployment-azure-vote-back.yaml",
         "deployment/deployment-azure-vote-front.yaml",
         "deployment/deployment-busybox.yaml",
+        "deployment/deployment-docker-busybox.yaml",
         "job/test-job.yaml",
         "kubernetes/conformance/conformance-e2e.yaml",
         "kubernetes/conformance/csi-hostpath-plugin.yaml",
@@ -37,6 +38,7 @@
         "pod/pod-same-containers.yaml",
         "pod/pod-spark.yaml",
         "pod/pod-three-containers.yaml",
+        "pod/pod-ubuntu.yaml",
         "replica-set/replica-busy.yaml",
         "secrets/azure-file-secrets.yaml",
         "stateful-set/web.yaml"
