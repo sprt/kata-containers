@@ -11,18 +11,17 @@ use crate::verity;
 
 use anyhow::{anyhow, Result};
 use docker_credential::{CredentialRetrievalError, DockerCredential};
+use fs2::FileExt;
 use log::warn;
 use log::{debug, info, LevelFilter};
 use oci_distribution::client::{linux_amd64_resolver, ClientConfig};
 use oci_distribution::{manifest, secrets::RegistryAuth, Client, Reference};
 use serde::{Deserialize, Serialize};
 use sha2::{digest::typenum::Unsigned, digest::OutputSizeUser, Sha256};
-use std::{io, io::Seek, io::Write, path::Path};
-use tokio::{io::AsyncWriteExt};
-use std::io::{BufWriter};
 use std::fs::OpenOptions;
-use fs2::FileExt;
-
+use std::io::BufWriter;
+use std::{io, io::Seek, io::Write, path::Path};
+use tokio::io::AsyncWriteExt;
 
 /// Container image properties obtained from an OCI repository.
 #[derive(Clone, Debug, Default)]
@@ -233,6 +232,7 @@ async fn get_image_layers(
         if layer
             .media_type
             .eq(manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE)
+            || layer.media_type.eq(manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE)
         {
             if layer_index < config_layer.rootfs.diff_ids.len() {
                 layers.push(ImageLayer {
@@ -297,9 +297,7 @@ async fn get_verity_hash(
         )
         .await
         {
-            error_message = format!(
-                "Failed to create verity hash for {layer_digest}, error {e}"
-            );
+            error_message = format!("Failed to create verity hash for {layer_digest}, error {e}");
             error = true
         };
 
@@ -332,11 +330,7 @@ async fn get_verity_hash(
 }
 
 // the store is a json file that matches layer hashes to verity hashes
-fn add_verity_to_store(
-    cache_file: &str,
-    diff_id: &str,
-    verity_hash: &str,
-) -> Result<()> {
+fn add_verity_to_store(cache_file: &str, diff_id: &str, verity_hash: &str) -> Result<()> {
     // open the json file in read mode, create it if it doesn't exist
     let read_file = OpenOptions::new()
         .read(true)
@@ -352,7 +346,7 @@ fn add_verity_to_store(
     };
 
     // Add new data to the deserialized JSON
-    data.push(ImageLayer{
+    data.push(ImageLayer {
         diff_id: diff_id.to_string(),
         verity_hash: verity_hash.to_string(),
     });
@@ -361,9 +355,7 @@ fn add_verity_to_store(
     let serialized = serde_json::to_string_pretty(&data)?;
 
     // Open the JSON file to write
-    let file = OpenOptions::new()
-        .write(true)
-        .open(cache_file)?;
+    let file = OpenOptions::new().write(true).open(cache_file)?;
 
     // try to lock the file, if it fails, get the error
     let result = file.try_lock_exclusive();
@@ -387,9 +379,7 @@ fn read_verity_from_store(cache_file: &str, diff_id: &str) -> Result<String> {
         return Ok("".to_string());
     }
 
-    let file = OpenOptions::new()
-        .read(true)
-        .open(cache_file)?;
+    let file = OpenOptions::new().read(true).open(cache_file)?;
 
     // If the file is empty, return empty string
     if file.metadata()?.len() == 0 {
