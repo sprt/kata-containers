@@ -1065,9 +1065,23 @@ check_directory_traversal(i_path) {
     endswith(i_path, "/..") == false
 }
 
+check_symlink_source {
+    # TODO: delete this rule once the symlink_src field gets implemented
+    # by all/most Guest VMs.
+    not input.symlink_src
+}
+check_symlink_source {
+    i_src := input.symlink_src
+    print("check_symlink_source: i_src =", i_src)
+
+    startswith(i_src, "/") == false
+    check_directory_traversal(i_src)
+}
+
 CopyFileRequest {
     print("CopyFileRequest: input.path =", input.path)
 
+    check_symlink_source
     check_directory_traversal(input.path)
 
     some regex1 in policy_data.request_defaults.CopyFileRequest
