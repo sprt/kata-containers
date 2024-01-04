@@ -1117,6 +1117,9 @@ CopyFileRequest {
 }
 
 CreateSandboxRequest {
+    print("CreateSandboxRequest: input.guest_hook_path =", input.guest_hook_path)
+    count(input.guest_hook_path) == 0
+
     print("CreateSandboxRequest: input.kernel_modules =", input.kernel_modules)
     count(input.kernel_modules) == 0
 
