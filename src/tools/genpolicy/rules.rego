@@ -8,7 +8,7 @@ import input
 # Default values, returned by OPA when rules cannot be evaluated to true.
 default CopyFileRequest := false
 default CreateContainerRequest := false
-default CreateSandboxRequest := true
+default CreateSandboxRequest := false
 default DestroySandboxRequest := true
 default ExecProcessRequest := false
 default GetOOMEventRequest := true
@@ -1093,6 +1093,11 @@ CopyFileRequest {
     regex.match(regex4, input.path)
 
     print("CopyFileRequest: true")
+}
+
+CreateSandboxRequest {
+    print("CreateSandboxRequest: input.kernel_modules =", input.kernel_modules)
+    count(input.kernel_modules) == 0
 }
 
 ExecProcessRequest {
