@@ -38,6 +38,9 @@ CreateContainerRequest {
     i_oci := input.OCI
     i_storages := input.storages
 
+    print("CreateContainerRequest: i_oci.Hooks =", i_oci.Hooks)
+    is_null(i_oci.Hooks)
+
     some p_container in policy_data.containers
     print("======== CreateContainerRequest: trying next policy container")
 
@@ -1117,6 +1120,9 @@ CopyFileRequest {
 }
 
 CreateSandboxRequest {
+    print("CreateSandboxRequest: input.guest_hook_path =", input.guest_hook_path)
+    count(input.guest_hook_path) == 0
+
     print("CreateSandboxRequest: input.kernel_modules =", input.kernel_modules)
     count(input.kernel_modules) == 0
 
