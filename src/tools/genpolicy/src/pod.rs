@@ -6,6 +6,7 @@
 // Allow K8s YAML field names.
 #![allow(non_snake_case)]
 
+use crate::agent;
 use crate::config_map;
 use crate::obj_meta;
 use crate::policy;
@@ -14,7 +15,6 @@ use crate::secret;
 use crate::settings;
 use crate::volume;
 use crate::yaml;
-use crate::agent;
 
 use async_trait::async_trait;
 use log::{debug, warn};
@@ -493,10 +493,10 @@ struct TopologySpreadConstraint {
     minDomains: Option<i32>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    nodeAffinityPolicy : Option<String>,
+    nodeAffinityPolicy: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    nodeTaintsPolicy : Option<String>,
+    nodeTaintsPolicy: Option<String>,
 }
 
 impl Container {
@@ -535,10 +535,7 @@ impl Container {
 
         if let Some(env_from_sources) = &self.envFrom {
             for env_from_source in env_from_sources {
-                let env_from_source_values = env_from_source.get_values(
-                    config_maps,
-                    secrets,
-                );
+                let env_from_source_values = env_from_source.get_values(config_maps, secrets);
 
                 for value in env_from_source_values {
                     if !dest_env.contains(&value) {
@@ -643,22 +640,25 @@ impl EnvFromSource {
         config_maps: &Vec<config_map::ConfigMap>,
         secrets: &Vec<secret::Secret>,
     ) -> Vec<String> {
-
         if let Some(config_map_env_source) = &self.configMapRef {
             if let Some(value) = config_map::get_values(&config_map_env_source.name, config_maps) {
                 return value.clone();
-            }
-            else {
-                panic!("Couldn't get values from configmap ref: {}", &config_map_env_source.name);
+            } else {
+                panic!(
+                    "Couldn't get values from configmap ref: {}",
+                    &config_map_env_source.name
+                );
             }
         }
 
         if let Some(secret_env_source) = &self.secretRef {
             if let Some(value) = secret::get_values(&secret_env_source.name, secrets) {
                 return value.clone();
-            }
-            else {
-                panic!("Couldn't get values from secret ref: {}", &secret_env_source.name);
+            } else {
+                panic!(
+                    "Couldn't get values from secret ref: {}",
+                    &secret_env_source.name
+                );
             }
         }
         panic!("envFrom: no configmap or secret source found!");

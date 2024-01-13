@@ -672,7 +672,7 @@ fn get_image_layer_storages(
             options: vec![format!("$(hash{layer_index})")],
             mount_point: format!("$(layer{layer_index})"),
             fs_group: None,
-            });
+        });
     }
 
     new_storages.reverse();
@@ -691,7 +691,7 @@ fn get_image_layer_storages(
         options: vec![layer_names.join(":"), layer_hashes.join(":")],
         mount_point: root.Path.clone(),
         fs_group: None,
-        };
+    };
 
     storages.push(overlay_storage);
 }
@@ -890,7 +890,10 @@ fn add_missing_strings(src: &Vec<String>, dest: &mut Vec<String>) {
     debug!("src = {:?}, dest = {:?}", src, dest)
 }
 
-pub fn get_kata_namespaces(is_pause_container: bool, use_host_network: bool) -> Vec<KataLinuxNamespace> {
+pub fn get_kata_namespaces(
+    is_pause_container: bool,
+    use_host_network: bool,
+) -> Vec<KataLinuxNamespace> {
     let mut namespaces: Vec<KataLinuxNamespace> = vec![KataLinuxNamespace {
         Type: "ipc".to_string(),
         Path: "".to_string(),
