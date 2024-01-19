@@ -78,6 +78,12 @@ pub struct PodSpec {
     pub hostNetwork: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    dnsConfig: Option<PodDNSConfig>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dnsPolicy: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     topologySpreadConstraints: Option<Vec<TopologySpreadConstraint>>,
 }
 
@@ -474,6 +480,27 @@ struct Toleration {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct LocalObjectReference {
     name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct PodDNSConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nameservers: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    options: Option<Vec<PodDNSConfigOption>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    searches: Option<Vec<String>>,
+}
+
+/// See Reference / Kubernetes API / Workload Resources / Pod.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct PodDNSConfigOption {
+    name: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<String>,
 }
 
 /// See Reference / Kubernetes API / Workload Resources / Pod.
