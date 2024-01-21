@@ -89,6 +89,7 @@ options:
 	cloud-hypervisor
 	cloud-hypervisor-glibc
 	firecracker
+	genpolicy
 	kata-ctl
 	kernel
 	kernel-dragonball-experimental
@@ -711,6 +712,10 @@ install_agent_ctl() {
 	install_tools_helper "agent-ctl"
 }
 
+install_genpolicy() {
+	install_tools_helper "genpolicy"
+}
+
 install_kata_ctl() {
 	install_tools_helper "kata-ctl"
 }
@@ -785,6 +790,8 @@ handle_build() {
 	cloud-hypervisor-glibc) install_clh_glibc ;;
 
 	firecracker) install_firecracker ;;
+
+	genpolicy) install_genpolicy ;;
 
 	kata-ctl) install_kata_ctl ;;
 
@@ -892,6 +899,7 @@ main() {
 		agent-ctl
 		cloud-hypervisor
 		firecracker
+		genpolicy
 		kata-ctl
 		kernel
 		kernel-experimental

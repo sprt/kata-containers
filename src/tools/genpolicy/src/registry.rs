@@ -268,7 +268,7 @@ async fn get_verity_hash(
     let base_dir = temp_dir.path();
     let cache_file = "layers-cache.json";
     // Use file names supported by both Linux and Windows.
-    let file_name = str::replace(&layer_digest, ":", "-");
+    let file_name = str::replace(layer_digest, ":", "-");
     let mut decompressed_path = base_dir.join(file_name);
     decompressed_path.set_extension("tar");
 
@@ -281,13 +281,13 @@ async fn get_verity_hash(
 
     // get value from store and return if it exists
     if use_cached_files {
-        verity_hash = read_verity_from_store(&cache_file, &diff_id)?;
+        verity_hash = read_verity_from_store(cache_file, diff_id)?;
         info!("Using cache file");
         info!("dm-verity root hash: {verity_hash}");
     }
 
     // create the layer files
-    if verity_hash == "" {
+    if verity_hash.is_empty() {
         if let Err(e) = create_decompressed_layer_file(
             client,
             reference,
@@ -310,7 +310,7 @@ async fn get_verity_hash(
                 Ok(v) => {
                     verity_hash = v;
                     if use_cached_files {
-                        add_verity_to_store(&cache_file, &diff_id, &verity_hash)?;
+                        add_verity_to_store(cache_file, diff_id, &verity_hash)?;
                     }
                     info!("dm-verity root hash: {verity_hash}");
                 }
@@ -322,7 +322,7 @@ async fn get_verity_hash(
     if error {
         // remove the cache file if we're using it
         if use_cached_files {
-            std::fs::remove_file(&cache_file)?;
+            std::fs::remove_file(cache_file)?;
         }
         warn!("{error_message}");
     }
@@ -407,19 +407,19 @@ async fn create_decompressed_layer_file(
         .await
         .map_err(|e| anyhow!(e))?;
     client
-        .pull_blob(&reference, layer_digest, &mut file)
+        .pull_blob(reference, layer_digest, &mut file)
         .await
         .map_err(|e| anyhow!(e))?;
     file.flush().await.map_err(|e| anyhow!(e))?;
 
     info!("Decompressing layer");
-    let compressed_file = std::fs::File::open(&compressed_path).map_err(|e| anyhow!(e))?;
+    let compressed_file = std::fs::File::open(compressed_path).map_err(|e| anyhow!(e))?;
     let mut decompressed_file = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&decompressed_path)?;
+        .open(decompressed_path)?;
     let mut gz_decoder = flate2::read::GzDecoder::new(compressed_file);
     std::io::copy(&mut gz_decoder, &mut decompressed_file).map_err(|e| anyhow!(e))?;
 
@@ -456,7 +456,7 @@ fn build_auth(reference: &Reference) -> RegistryAuth {
 
     let server = reference
         .resolve_registry()
-        .strip_suffix("/")
+        .strip_suffix('/')
         .unwrap_or_else(|| reference.resolve_registry());
 
     match docker_credential::get_credential(server) {

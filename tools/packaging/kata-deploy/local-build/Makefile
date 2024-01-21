@@ -71,6 +71,9 @@ cloud-hypervisor-glibc-tarball:
 firecracker-tarball:
 	${MAKE} $@-build
 
+genpolicy-tarball:
+	${MAKE} $@-build
+
 kata-ctl-tarball:
 	${MAKE} $@-build
 
