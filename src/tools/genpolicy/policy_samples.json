@@ -8,6 +8,7 @@
         "deployment/deployment-busybox.yaml",
         "deployment/deployment-docker-busybox.yaml",
         "job/test-job.yaml",
+        "job/test-job2.yaml",
         "kubernetes/conformance/conformance-e2e.yaml",
         "kubernetes/conformance/csi-hostpath-plugin.yaml",
         "kubernetes/conformance/csi-hostpath-testing.yaml",
@@ -41,8 +42,10 @@
         "pod/pod-three-containers.yaml",
         "pod/pod-ubuntu.yaml",
         "replica-set/replica-busy.yaml",
+        "replica-set/replica2.yaml",
         "secrets/azure-file-secrets.yaml",
-        "stateful-set/web.yaml"
+        "stateful-set/web.yaml",
+        "stateful-set/web2.yaml"
     ],
     "silently_ignored": [
         "webhook/webhook-pod1.yaml",
