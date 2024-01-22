@@ -66,6 +66,10 @@ pub trait K8sResource {
     fn get_annotations(&self) -> &Option<BTreeMap<String, String>>;
     fn use_host_network(&self) -> bool;
     fn use_sandbox_pidns(&self) -> bool;
+    fn get_process_fields(&self, _process: &mut policy::KataProcess) {
+        // Just Pods can have a PodSecurityContext field, so the other
+        // resources can use this default get_process_fields implementation.
+    }
 }
 
 /// See Reference / Kubernetes API / Common Definitions / LabelSelector.
