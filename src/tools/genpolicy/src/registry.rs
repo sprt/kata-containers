@@ -374,25 +374,25 @@ fn add_verity_to_store(cache_file: &str, diff_id: &str, verity_hash: &str) -> Re
 // helper function to read the verity hash from the store
 // returns empty string if not found or file does not exist
 fn read_verity_from_store(cache_file: &str, diff_id: &str) -> Result<String> {
-    // see if file exists, return empty if not
-    if !Path::new(cache_file).exists() {
-        return Ok("".to_string());
-    }
-
-    let file = OpenOptions::new().read(true).open(cache_file)?;
-
-    // If the file is empty, return empty string
-    if file.metadata()?.len() == 0 {
-        return Ok("".to_string());
-    }
-
-    let data: Vec<ImageLayer> = serde_json::from_reader(file)?;
-    for layer in data {
-        if layer.diff_id == diff_id {
-            return Ok(layer.verity_hash);
+    match OpenOptions::new().read(true).open(cache_file) {
+        Ok(file) => match serde_json::from_reader(file) {
+            Result::<Vec<ImageLayer>, _>::Ok(layers) => {
+                for layer in layers {
+                    if layer.diff_id == diff_id {
+                        return Ok(layer.verity_hash);
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("read_verity_from_store: failed to read cached image layers: {e}");
+            }
+        },
+        Err(e) => {
+            info!("read_verity_from_store: failed to open cache file: {e}");
         }
     }
-    Ok("".to_string())
+
+    Ok(String::new())
 }
 
 async fn create_decompressed_layer_file(
