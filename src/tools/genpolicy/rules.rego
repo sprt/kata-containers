@@ -45,6 +45,9 @@ CreateContainerRequest {
     print("CreateContainerRequest: i_oci.Hooks =", i_oci.Hooks)
     is_null(i_oci.Hooks)
 
+    print("CreateContainerRequest: i_oci.Linux.Seccomp =", i_oci.Linux.Seccomp)
+    is_null(i_oci.Linux.Seccomp)
+
     some p_container in policy_data.containers
     print("======== CreateContainerRequest: trying next policy container")
 
