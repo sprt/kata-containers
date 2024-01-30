@@ -189,6 +189,7 @@ pub fn new_k8s_resource(
         | "Namespace"
         | "PersistentVolume"
         | "PersistentVolumeClaim"
+        | "PodDisruptionBudget"
         | "PriorityClass"
         | "ResourceQuota"
         | "RoleBinding"
