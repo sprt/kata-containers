@@ -206,7 +206,7 @@ lazy_static! {
                 gid: Some(0xffffffff),
             },
         ];
-        
+
         let sev_guest_path = "/dev/sev-guest";
         if let Ok(sev_guest_attr) = fs::metadata(sev_guest_path) {
             let sev_guest_devid = sev_guest_attr.rdev();
