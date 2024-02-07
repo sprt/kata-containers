@@ -307,6 +307,7 @@
             "commands": [],
             "regex": []
         },
+        "CloseStdinRequest": false,
         "ReadStreamRequest": true,
         "UpdateEphemeralMountsRequest": false,
         "WriteStreamRequest": false
