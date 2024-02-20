@@ -192,6 +192,7 @@ pub fn new_k8s_resource(
         | "PodDisruptionBudget"
         | "PriorityClass"
         | "ResourceQuota"
+        | "Role"
         | "RoleBinding"
         | "Service"
         | "ServiceAccount" => {
