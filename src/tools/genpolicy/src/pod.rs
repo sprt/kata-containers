@@ -60,6 +60,9 @@ pub struct PodSpec {
     pub volumes: Option<Vec<volume::Volume>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    nodeName: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     serviceAccountName: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -842,7 +845,7 @@ impl yaml::K8sResource for Pod {
     }
 
     fn serialize(&mut self, policy: &str) -> String {
-        yaml::add_policy_annotation(&mut self.doc_mapping, "metadata", policy);
+        yaml::add_policy_annotation(&mut self.doc_mapping, "", policy);
         serde_yaml::to_string(&self.doc_mapping).unwrap()
     }
 
