@@ -101,6 +101,9 @@ jobs:
         run: |
           ./tests/install_rust.sh
           echo "${HOME}/.cargo/bin" >> $GITHUB_PATH
+      - name: Install protobuf-compiler
+        if: ${{ matrix.command == 'make check' && matrix.component == 'genpolicy' }}
+        run: sudo apt-get -y install protobuf-compiler
       - name: Install musl-tools
         if: ${{ matrix.component != 'runtime' }}
         run: sudo apt-get -y install musl-tools
