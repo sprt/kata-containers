@@ -453,10 +453,17 @@ fn get_verity_hash_value(path: &Path) -> Result<String> {
 
     Ok(result)
 }
+
+#[cfg(target_os = "linux")]
 pub async fn get_container(config: &Config, image: &str) -> Result<Container> {
     if let Some(socket_path) = &config.containerd_socket_path {
         return Container::new_containerd_pull(config.use_cache, image, socket_path).await;
     }
+    Container::new(config.use_cache, image).await
+}
+
+#[cfg(target_os = "windows")]
+pub async fn get_container(config: &Config, image: &str) -> Result<Container> {
     Container::new(config.use_cache, image).await
 }
 
