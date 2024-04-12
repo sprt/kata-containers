@@ -16,6 +16,7 @@ use crate::mount_and_storage;
 use crate::no_policy;
 use crate::pod;
 use crate::policy;
+use crate::pvc;
 use crate::replica_set;
 use crate::replication_controller;
 use crate::secret;
@@ -61,6 +62,7 @@ pub trait K8sResource {
         &self,
         policy_mounts: &mut Vec<policy::KataMount>,
         storages: &mut Vec<agent::Storage>,
+        persistent_volume_claims: &[pvc::PersistentVolumeClaim],
         container: &pod::Container,
         settings: &settings::Settings,
     );
@@ -242,6 +244,7 @@ pub async fn k8s_resource_init(spec: &mut pod::PodSpec, config: &Config) {
 pub fn get_container_mounts_and_storages(
     policy_mounts: &mut Vec<policy::KataMount>,
     storages: &mut Vec<agent::Storage>,
+    persistent_volume_claims: &[pvc::PersistentVolumeClaim],
     container: &pod::Container,
     settings: &settings::Settings,
     volumes: &Vec<volume::Volume>,
@@ -254,6 +257,7 @@ pub fn get_container_mounts_and_storages(
                         settings,
                         policy_mounts,
                         storages,
+                        persistent_volume_claims,
                         volume,
                         volume_mount,
                     );

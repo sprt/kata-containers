@@ -12,6 +12,7 @@ use crate::containerd;
 use crate::mount_and_storage;
 use crate::pod;
 use crate::policy;
+use crate::pvc;
 use crate::registry;
 use crate::secret;
 use crate::settings;
@@ -43,6 +44,9 @@ pub struct AgentPolicy {
 
     /// K8s Secret resources, containing additional pod settings.
     secrets: Vec<secret::Secret>,
+
+    /// K8s Persistent volume claim resources
+    persistent_volume_claims: Vec<pvc::PersistentVolumeClaim>,
 
     /// Rego rules read from a file (rules.rego).
     pub rules: String,
@@ -384,6 +388,7 @@ pub struct ClusterConfig {
 impl AgentPolicy {
     pub async fn from_files(config: &utils::Config) -> Result<AgentPolicy> {
         let mut config_maps = Vec::new();
+        let mut pvcs = Vec::new();
         let mut secrets = Vec::new();
         let mut resources = Vec::new();
         let yaml_contents = yaml::get_input_yaml(&config.yaml_file)?;
@@ -405,6 +410,10 @@ impl AgentPolicy {
                     let secret: secret::Secret = serde_yaml::from_str(&yaml_string)?;
                     debug!("{:#?}", &secret);
                     secrets.push(secret);
+                } else if kind.eq("PersistentVolumeClaim") {
+                    let pvc: pvc::PersistentVolumeClaim = serde_yaml::from_str(&yaml_string)?;
+                    debug!("{:#?}", &pvc);
+                    pvcs.push(pvc);
                 }
 
                 // Although copies of ConfigMap and Secret resources get created above,
@@ -430,6 +439,7 @@ impl AgentPolicy {
                 settings,
                 config_maps,
                 secrets,
+                persistent_volume_claims: pvcs,
                 config: config.clone(),
             })
         } else {
@@ -536,6 +546,7 @@ impl AgentPolicy {
         resource.get_container_mounts_and_storages(
             &mut mounts,
             &mut storages,
+            &self.persistent_volume_claims,
             yaml_container,
             &self.settings,
         );
