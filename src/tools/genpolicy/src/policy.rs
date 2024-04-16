@@ -388,6 +388,7 @@ pub struct ClusterConfig {
 
 enum K8sResourceEnum {
     ConfigMap(config_map::ConfigMap),
+    PersistentVolumeClaim(pvc::PersistentVolumeClaim),
     Secret(secret::Secret),
 }
 
@@ -436,6 +437,7 @@ impl AgentPolicy {
             for resource_file in config_files {
                 match parse_config_file(resource_file.clone()).await? {
                     K8sResourceEnum::ConfigMap(config_map) => config_maps.push(config_map),
+                    K8sResourceEnum::PersistentVolumeClaim(pvc) => pvcs.push(pvc),
                     K8sResourceEnum::Secret(secret) => secrets.push(secret),
                 }
             }
@@ -749,6 +751,9 @@ async fn parse_config_file(yaml_file: String) -> Result<K8sResourceEnum> {
         "ConfigMap" => Ok(K8sResourceEnum::ConfigMap(serde_yaml::from_value(
             doc_mapping,
         )?)),
+        "PersistentVolumeClaim" => Ok(K8sResourceEnum::PersistentVolumeClaim(
+            serde_yaml::from_value(doc_mapping)?,
+        )),
         "Secret" => Ok(K8sResourceEnum::Secret(serde_yaml::from_value(
             doc_mapping,
         )?)),
