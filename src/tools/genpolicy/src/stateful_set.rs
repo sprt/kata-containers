@@ -8,10 +8,10 @@
 
 use crate::agent;
 use crate::obj_meta;
-use crate::persistent_volume_claim;
 use crate::pod;
 use crate::pod_template;
 use crate::policy;
+use crate::pvc;
 use crate::settings;
 use crate::utils::Config;
 use crate::yaml;
@@ -46,7 +46,7 @@ struct StatefulSetSpec {
     template: pod_template::PodTemplateSpec,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    volumeClaimTemplates: Option<Vec<persistent_volume_claim::PersistentVolumeClaim>>,
+    volumeClaimTemplates: Option<Vec<pvc::PersistentVolumeClaim>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     updateStrategy: Option<StatefulSetUpdateStrategy>,
@@ -113,6 +113,7 @@ impl yaml::K8sResource for StatefulSet {
         &self,
         policy_mounts: &mut Vec<policy::KataMount>,
         storages: &mut Vec<agent::Storage>,
+        persistent_volume_claims: &[pvc::PersistentVolumeClaim],
         container: &pod::Container,
         settings: &settings::Settings,
     ) {
@@ -120,6 +121,7 @@ impl yaml::K8sResource for StatefulSet {
             yaml::get_container_mounts_and_storages(
                 policy_mounts,
                 storages,
+                persistent_volume_claims,
                 container,
                 settings,
                 volumes,
@@ -191,7 +193,7 @@ impl StatefulSet {
     fn get_mounts_and_storages(
         policy_mounts: &mut Vec<policy::KataMount>,
         volume_mounts: &Vec<pod::VolumeMount>,
-        claims: &Vec<persistent_volume_claim::PersistentVolumeClaim>,
+        claims: &[pvc::PersistentVolumeClaim],
     ) {
         for mount in volume_mounts {
             for claim in claims {

@@ -12,12 +12,14 @@ use crate::containerd;
 use crate::mount_and_storage;
 use crate::pod;
 use crate::policy;
+use crate::pvc;
 use crate::registry;
 use crate::secret;
 use crate::settings;
 use crate::utils;
 use crate::yaml;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use log::debug;
@@ -43,6 +45,9 @@ pub struct AgentPolicy {
 
     /// K8s Secret resources, containing additional pod settings.
     secrets: Vec<secret::Secret>,
+
+    /// K8s Persistent volume claim resources
+    persistent_volume_claims: Vec<pvc::PersistentVolumeClaim>,
 
     /// Rego rules read from a file (rules.rego).
     pub rules: String,
@@ -349,6 +354,9 @@ pub struct CommonData {
     /// Regex prefix for shared file paths - e.g., "^$(cpath)/$(bundle-id)-[a-z0-9]{16}-".
     pub sfprefix: String,
 
+    /// Path to the shared sandbox storage - e.g., "/run/kata-containers/sandbox/storage".
+    pub spath: String,
+
     /// Regex for an IPv4 address.
     pub ipv4_a: String,
 
@@ -366,6 +374,9 @@ pub struct CommonData {
 
     /// Default capabilities for a privileged container.
     pub privileged_caps: Vec<String>,
+
+    /// Storage classes which mounts should be handled as virtio-blk devices.
+    pub virtio_blk_storage_classes: Vec<String>,
 }
 
 /// Struct used to read data from the settings file and copy that data into the policy.
@@ -381,9 +392,16 @@ pub struct ClusterConfig {
     default_namespace: String,
 }
 
+enum K8sResourceEnum {
+    ConfigMap(config_map::ConfigMap),
+    PersistentVolumeClaim(pvc::PersistentVolumeClaim),
+    Secret(secret::Secret),
+}
+
 impl AgentPolicy {
     pub async fn from_files(config: &utils::Config) -> Result<AgentPolicy> {
         let mut config_maps = Vec::new();
+        let mut pvcs = Vec::new();
         let mut secrets = Vec::new();
         let mut resources = Vec::new();
         let yaml_contents = yaml::get_input_yaml(&config.yaml_file)?;
@@ -405,6 +423,10 @@ impl AgentPolicy {
                     let secret: secret::Secret = serde_yaml::from_str(&yaml_string)?;
                     debug!("{:#?}", &secret);
                     secrets.push(secret);
+                } else if kind.eq("PersistentVolumeClaim") {
+                    let pvc: pvc::PersistentVolumeClaim = serde_yaml::from_str(&yaml_string)?;
+                    debug!("{:#?}", &pvc);
+                    pvcs.push(pvc);
                 }
 
                 // Although copies of ConfigMap and Secret resources get created above,
@@ -417,9 +439,13 @@ impl AgentPolicy {
 
         let settings = settings::Settings::new(&config.json_settings_path);
 
-        if let Some(config_map_files) = &config.config_map_files {
-            for file in config_map_files {
-                config_maps.push(config_map::ConfigMap::new(file)?);
+        if let Some(config_files) = &config.config_files {
+            for resource_file in config_files {
+                match parse_config_file(resource_file.clone()).await? {
+                    K8sResourceEnum::ConfigMap(config_map) => config_maps.push(config_map),
+                    K8sResourceEnum::PersistentVolumeClaim(pvc) => pvcs.push(pvc),
+                    K8sResourceEnum::Secret(secret) => secrets.push(secret),
+                }
             }
         }
 
@@ -430,6 +456,7 @@ impl AgentPolicy {
                 settings,
                 config_maps,
                 secrets,
+                persistent_volume_claims: pvcs,
                 config: config.clone(),
             })
         } else {
@@ -536,6 +563,7 @@ impl AgentPolicy {
         resource.get_container_mounts_and_storages(
             &mut mounts,
             &mut storages,
+            &self.persistent_volume_claims,
             yaml_container,
             &self.settings,
         );
@@ -714,6 +742,29 @@ fn get_image_layer_storages(
     };
 
     storages.push(overlay_storage);
+}
+
+async fn parse_config_file(yaml_file: String) -> Result<K8sResourceEnum> {
+    let yaml_contents = yaml::get_input_yaml(&Some(yaml_file))?;
+    let document = serde_yaml::Deserializer::from_str(&yaml_contents);
+    let doc_mapping = Value::deserialize(document)?;
+    let kind = doc_mapping
+        .get("kind")
+        .and_then(|v| v.as_str())
+        .ok_or(anyhow!("no kind"))?;
+
+    match kind {
+        "ConfigMap" => Ok(K8sResourceEnum::ConfigMap(serde_yaml::from_value(
+            doc_mapping,
+        )?)),
+        "PersistentVolumeClaim" => Ok(K8sResourceEnum::PersistentVolumeClaim(
+            serde_yaml::from_value(doc_mapping)?,
+        )),
+        "Secret" => Ok(K8sResourceEnum::Secret(serde_yaml::from_value(
+            doc_mapping,
+        )?)),
+        k => Err(anyhow!("unsupported attached resource kind '{k}'")),
+    }
 }
 
 /// Converts the given name to a string representation of its sha256 hash.

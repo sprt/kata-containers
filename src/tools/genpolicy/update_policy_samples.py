@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
 import subprocess
 import sys
@@ -6,8 +7,6 @@ import time
 # runs genpolicy tools on the following files
 # should run this after any change to genpolicy
 # usage: python3 update_policy_samples.py
-
-samples = ""
 
 with open('policy_samples.json') as f:
     samples = json.load(f)
@@ -20,17 +19,18 @@ needs_containerd_pull = samples["needs_containerd_pull"]
 file_base_path = "../../agent/samples/policy/yaml"
 
 def runCmd(arg):
-    proc = subprocess.run([arg], stdout=sys.stdout, stderr=sys.stderr, universal_newlines=True, input="", shell=True)
-    print(f"COMMAND: {arg}")
-    if proc.returncode != 0:
-        print(f"`{arg}` failed with exit code {proc.returncode}. Stderr: {proc.stderr}, Stdout: {proc.stdout}")
-    return proc
+    return subprocess.run([arg], stdout=sys.stdout, stderr=sys.stderr, universal_newlines=True, input="", shell=True)
 
 def timeRunCmd(arg):
     start = time.time()
-    runCmd(arg)
+    proc = runCmd(arg)
     end = time.time()
-    print(f"Time taken: {round(end - start, 2)} seconds")
+
+    log = f"COMMAND: {arg}\n"
+    if proc.returncode != 0:
+        log += f"`{arg}` failed with exit code {proc.returncode}. Stderr: {proc.stderr}, Stdout: {proc.stdout}\n"
+    log += f"Time taken: {round(end - start, 2)} seconds"
+    print(log)
 
 # check we can access all files we are about to update
 for file in default_yamls + silently_ignored + no_policy:
@@ -39,19 +39,22 @@ for file in default_yamls + silently_ignored + no_policy:
         print(f"filepath does not exists: {filepath}")
 
 # build tool
+print("COMMAND: cargo build")
 runCmd("cargo build")
 
 # update files
 genpolicy_path = "target/debug/genpolicy"
 
 total_start = time.time()
+executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
 for file in default_yamls + no_policy + needs_containerd_pull:
-    timeRunCmd(f"sudo {genpolicy_path} -d -y {os.path.join(file_base_path, file)}")
+    executor.submit(timeRunCmd, f"sudo {genpolicy_path} -d -y {os.path.join(file_base_path, file)}")
 
 for file in silently_ignored:
-    timeRunCmd(f"sudo {genpolicy_path} -d -s -y {os.path.join(file_base_path, file)}")
+    executor.submit(timeRunCmd, f"sudo {genpolicy_path} -d -s -y {os.path.join(file_base_path, file)}")
 
+executor.shutdown()
 total_end = time.time()
 
 print(f"Total time taken: {total_end - total_start} seconds")

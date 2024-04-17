@@ -14,12 +14,8 @@ struct CommandLineOptions {
     )]
     yaml_file: Option<String>,
 
-    #[clap(
-        short,
-        long,
-        help = "Optional Kubernetes config map YAML input file path"
-    )]
-    config_map_file: Option<String>,
+    #[clap(short, long, help = "Optional Kubernetes YAML input file path")]
+    config_file: Option<Vec<String>>,
 
     #[clap(
         short = 'p',
@@ -85,7 +81,7 @@ pub struct Config {
     pub yaml_file: Option<String>,
     pub rego_rules_path: String,
     pub json_settings_path: String,
-    pub config_map_files: Option<Vec<String>>,
+    pub config_files: Option<Vec<String>>,
 
     pub silent_unsupported_fields: bool,
     pub raw_out: bool,
@@ -96,24 +92,12 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         let args = CommandLineOptions::parse();
-
-        let mut config_map_files = Vec::new();
-        if let Some(config_map_file) = &args.config_map_file {
-            config_map_files.push(config_map_file.clone());
-        }
-
-        let cm_files = if !config_map_files.is_empty() {
-            Some(config_map_files.clone())
-        } else {
-            None
-        };
-
         Self {
             use_cache: args.use_cached_files,
             yaml_file: args.yaml_file,
             rego_rules_path: args.rego_rules_path,
             json_settings_path: args.json_settings_path,
-            config_map_files: cm_files,
+            config_files: args.config_file,
             silent_unsupported_fields: args.silent_unsupported_fields,
             raw_out: args.raw_out,
             base64_out: args.base64_out,

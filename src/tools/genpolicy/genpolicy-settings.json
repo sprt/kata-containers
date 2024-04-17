@@ -212,6 +212,7 @@
     "common": {
         "cpath": "/run/kata-containers/shared/containers",
         "sfprefix": "^$(cpath)/$(bundle-id)-[a-z0-9]{16}-",
+        "spath": "/run/kata-containers/sandbox/storage",
         "ip_p": "[0-9]{1,5}",
         "ipv4_a": "((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}",
         "svc_name": "[A-Z0-9_\\.\\-]+",
@@ -274,6 +275,10 @@
             "CAP_PERFMON",
             "CAP_BPF",
             "CAP_CHECKPOINT_RESTORE"
+        ],
+        "virtio_blk_storage_classes": [
+            "cc-managed-csi",
+            "cc-managed-premium-csi"
         ]
     },
     "kata_config": {
